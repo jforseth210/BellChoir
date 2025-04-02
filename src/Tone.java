@@ -14,12 +14,24 @@ import javax.sound.sampled.SourceDataLine;
 
 public class Tone {
 
+    /**
+     * Main entry point.
+     * Loads a song, initializes audio device, and plays the song.
+     * 
+     * @param args 1: Song file name
+     */
     public static void main(String[] args) {
         if (args.length != 1) {
-            System.err.println("Please specifiy a song file");
+            System.err.println("Please specifiy one song file");
             System.exit(1);
         }
+
+        // Read the song in from the file
         List<BellNote> song = loadSong(args[0]);
+        // The song is invalid, bail out.
+        if (song == null) {
+            return;
+        }
         final AudioFormat af = new AudioFormat(Note.SAMPLE_RATE, 8, 1, true, false);
         try {
             Tone t = new Tone(af);
@@ -31,26 +43,45 @@ public class Tone {
         }
     }
 
+    /**
+     * Reads a song in from a file, validates it, and returns it as a list of
+     * BellNotes.
+     * 
+     * @param filename - The file to play
+     * @return - A list of BellNotes if valid song, null if invalid
+     */
     private static List<BellNote> loadSong(String filename) {
         List<BellNote> song = new ArrayList<>();
+        // Flag that indicates there's at least one problem with the song
         boolean success = true;
+        // Keeps track of the line number for better error messages
         int lineNumber = 0;
+
         try (Scanner scanner = new Scanner(new File(filename))) {
+            // Read the song file line by line
             while (scanner.hasNextLine()) {
                 lineNumber++;
                 String line = scanner.nextLine();
+                // Split the line into the note and length
                 String[] parts = line.split(" ");
+
+                // There should be a note, and a length, no more or less
                 if (parts.length == 2) {
                     Note note;
+
                     try {
+                        // Try to convert the note to a Note enum
                         note = Note.valueOf(parts[0]);
                     } catch (IllegalArgumentException e) {
+                        // If it's not a valid note, complain and validate the rest of the song
                         System.err.println("Line #" + lineNumber + " is invalid. " + parts[0] + " isn't a valid note.");
                         System.err.println("Valid notes are: " + Arrays.toString(Note.values()));
                         success = false;
                         continue;
                     }
-                    NoteLength length = NoteLength.WHOLE;
+
+                    // Try to determine the length
+                    NoteLength length = null;
                     switch (parts[1]) {
                         case "1":
                             length = NoteLength.WHOLE;
@@ -62,26 +93,31 @@ public class Tone {
                             length = NoteLength.QUARTER;
                             break;
                         case "8":
-                            length = NoteLength.EIGTH;
+                            length = NoteLength.EIGHTH;
                             break;
                         default:
+                            // If it's not a valid length, complain and validate the rest of the song
                             System.err.println("Line #" + lineNumber + " is invalid. Unknown length: " + parts[1]);
                             System.err.println("Valid lengths are: [1, 2, 4, 8]");
                             success = false;
                     }
+                    // Add the note and length to the song
                     song.add(new BellNote(note, length));
                 } else {
+                    // If there's not exactly 2 parts, complain and validate the rest of the song
                     System.err.println("Line #" + lineNumber
                             + " is invalid. Note and length should be separated by a single space");
                     success = false;
                 }
             }
         } catch (FileNotFoundException e) {
+            // If the file doesn't exist, complain
             System.err.println("Error loading song: " + filename);
             success = false;
         }
+        // If there were problems with the song, return null
         if (!success) {
-            System.exit(1);
+            return null;
         }
         return song;
     }
@@ -92,23 +128,34 @@ public class Tone {
         this.af = af;
     }
 
-    private Map<BellNote, Member> members = new HashMap<>();
-
+    /**
+     * Plays a song by telling each member of the choir to play their note.
+     */
     void playSong(List<BellNote> song) throws LineUnavailableException, InterruptedException {
+        // The Members of the choir, mapped by the note they're playing
+        Map<BellNote, Member> members = new HashMap<>();
+
+        // Initialize the audio device
         try (final SourceDataLine line = AudioSystem.getSourceDataLine(af)) {
             line.open();
             line.start();
 
             for (BellNote bellNote : song) {
                 Member member;
+                // See if we have someone who plays this note
                 if (members.containsKey(bellNote)) {
+                    // We do, so we get them from the choir
                     member = members.get(bellNote);
                 } else {
+                    // We don't create a new member
                     member = new Member(bellNote, line);
+                    // And add them to the choir
                     members.put(bellNote, member);
                 }
                 System.out.println("Playing note: " + bellNote.note);
+                // Ask the member to play their note
                 member.run();
+                // Wait for the note to finish before starting the next note
                 Thread.sleep(bellNote.length.timeMs());
             }
             line.drain();
@@ -117,6 +164,9 @@ public class Tone {
 
 }
 
+/**
+ * A note and duration
+ */
 class BellNote {
     final Note note;
     final NoteLength length;
@@ -127,11 +177,14 @@ class BellNote {
     }
 }
 
+/**
+ * A note duration
+ */
 enum NoteLength {
     WHOLE(1.0f),
     HALF(0.5f),
     QUARTER(0.25f),
-    EIGTH(0.125f);
+    EIGHTH(0.125f);
 
     private final int timeMs;
 
@@ -144,6 +197,9 @@ enum NoteLength {
     }
 }
 
+/**
+ * A valid musical note
+ */
 enum Note {
     // REST Must be the first 'Note'
     REST,
