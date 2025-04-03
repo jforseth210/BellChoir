@@ -4,4 +4,4 @@ This is a project that plays songs using a different thread for each note. This 
 
 ### Requirements
 
-[x] Project must be committed and pushed up to GitHub: If you're reading this, that's working
+- [x] Project must be committed and pushed up to GitHub: If you're reading this, that's working
