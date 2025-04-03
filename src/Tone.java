@@ -133,7 +133,7 @@ public class Tone {
      */
     private void playSong(List<BellNote> song) throws LineUnavailableException, InterruptedException {
         // The Members of the choir, mapped by the note they're playing
-        Map<BellNote, Member> members = new HashMap<>();
+        Map<BellNote, Thread> choir = new HashMap<>();
 
         // Initialize the audio device
         try (final SourceDataLine line = AudioSystem.getSourceDataLine(af)) {
@@ -141,20 +141,20 @@ public class Tone {
             line.start();
 
             for (BellNote bellNote : song) {
-                Member member;
+                Thread memberThread;
                 // See if we have someone who plays this note
-                if (members.containsKey(bellNote)) {
+                if (choir.containsKey(bellNote)) {
                     // We do, so we get them from the choir
-                    member = members.get(bellNote);
+                    memberThread = choir.get(bellNote);
                 } else {
-                    // We don't create a new member
-                    member = new Member(bellNote, line);
+                    // We don't, create a new member
+                    memberThread = new Thread(new Member(bellNote, line));
                     // And add them to the choir
-                    members.put(bellNote, member);
+                    choir.put(bellNote, memberThread);
                 }
                 System.out.println("Playing note: " + bellNote.note);
                 // Ask the member to play their note
-                new Thread(member).start();
+                memberThread.start();
                 // Wait for the note to finish before starting the next note
                 Thread.sleep(bellNote.length.timeMs());
             }
