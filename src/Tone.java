@@ -131,7 +131,7 @@ public class Tone {
     /**
      * Plays a song by telling each member of the choir to play their note.
      */
-    void playSong(List<BellNote> song) throws LineUnavailableException, InterruptedException {
+    private void playSong(List<BellNote> song) throws LineUnavailableException, InterruptedException {
         // The Members of the choir, mapped by the note they're playing
         Map<BellNote, Member> members = new HashMap<>();
 
@@ -154,7 +154,7 @@ public class Tone {
                 }
                 System.out.println("Playing note: " + bellNote.note);
                 // Ask the member to play their note
-                member.run();
+                new Thread(member).start();
                 // Wait for the note to finish before starting the next note
                 Thread.sleep(bellNote.length.timeMs());
             }
