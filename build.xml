@@ -24,7 +24,7 @@
   </target>
 
   <target name="songarg" unless="song">
-    <property name="song" value="${basedir}/BadSong.txt"/>
+    <property name="song" value="${basedir}/Joy.txt"/>
   </target>
 
   <target name="run" depends="jar,songarg">
